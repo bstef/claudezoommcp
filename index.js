@@ -1,0 +1,485 @@
+#!/usr/bin/env node
+
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import axios from "axios";
+
+// Zoom API configuration
+const ZOOM_API_BASE = "https://api.zoom.us/v2";
+let accessToken = null;
+
+// Initialize access token from environment
+function getAccessToken() {
+  if (!accessToken) {
+    accessToken = process.env.ZOOM_ACCESS_TOKEN;
+    if (!accessToken) {
+      throw new Error("ZOOM_ACCESS_TOKEN environment variable is required");
+    }
+  }
+  return accessToken;
+}
+
+// Helper function to make Zoom API requests
+async function makeZoomRequest(method, endpoint, data = null) {
+  const token = getAccessToken();
+  const config = {
+    method,
+    url: `${ZOOM_API_BASE}${endpoint}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  if (data) {
+    config.data = data;
+  }
+
+  try {
+    const response = await axios(config);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(
+        `Zoom API Error: ${error.response.status} - ${
+          error.response.data.message || JSON.stringify(error.response.data)
+        }`
+      );
+    }
+    throw error;
+  }
+}
+
+// Create MCP server instance
+const server = new Server(
+  {
+    name: "zoom-mcp-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// List available tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "list_meetings",
+        description:
+          "List all scheduled meetings for the authenticated user. Returns upcoming, live, and previous meetings.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            type: {
+              type: "string",
+              enum: ["scheduled", "live", "upcoming", "upcoming_meetings", "previous_meetings"],
+              description: "The meeting types: scheduled, live, upcoming, upcoming_meetings, or previous_meetings",
+              default: "upcoming",
+            },
+            page_size: {
+              type: "number",
+              description: "Number of records per page (max 300)",
+              default: 30,
+            },
+          },
+        },
+      },
+      {
+        name: "get_meeting",
+        description:
+          "Get detailed information about a specific meeting by meeting ID",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "The meeting ID or meeting UUID",
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+      {
+        name: "create_meeting",
+        description:
+          "Create a new Zoom meeting with specified settings",
+        inputSchema: {
+          type: "object",
+          properties: {
+            topic: {
+              type: "string",
+              description: "Meeting topic/title",
+            },
+            type: {
+              type: "number",
+              description: "Meeting type: 1 (instant), 2 (scheduled), 3 (recurring no fixed time), 8 (recurring fixed time)",
+              default: 2,
+            },
+            start_time: {
+              type: "string",
+              description: "Meeting start time in ISO 8601 format (e.g., 2023-03-22T07:32:55Z)",
+            },
+            duration: {
+              type: "number",
+              description: "Meeting duration in minutes",
+            },
+            timezone: {
+              type: "string",
+              description: "Timezone for the meeting (e.g., America/New_York)",
+            },
+            agenda: {
+              type: "string",
+              description: "Meeting description/agenda",
+            },
+            password: {
+              type: "string",
+              description: "Meeting password",
+            },
+            settings: {
+              type: "object",
+              description: "Additional meeting settings",
+              properties: {
+                host_video: {
+                  type: "boolean",
+                  description: "Start video when host joins",
+                },
+                participant_video: {
+                  type: "boolean",
+                  description: "Start video when participants join",
+                },
+                join_before_host: {
+                  type: "boolean",
+                  description: "Allow participants to join before host",
+                },
+                mute_upon_entry: {
+                  type: "boolean",
+                  description: "Mute participants upon entry",
+                },
+                waiting_room: {
+                  type: "boolean",
+                  description: "Enable waiting room",
+                },
+                audio: {
+                  type: "string",
+                  enum: ["both", "telephony", "voip"],
+                  description: "Audio options",
+                },
+              },
+            },
+          },
+          required: ["topic"],
+        },
+      },
+      {
+        name: "update_meeting",
+        description:
+          "Update an existing meeting's settings",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "The meeting ID to update",
+            },
+            topic: {
+              type: "string",
+              description: "Updated meeting topic",
+            },
+            start_time: {
+              type: "string",
+              description: "Updated start time in ISO 8601 format",
+            },
+            duration: {
+              type: "number",
+              description: "Updated duration in minutes",
+            },
+            agenda: {
+              type: "string",
+              description: "Updated meeting agenda",
+            },
+            settings: {
+              type: "object",
+              description: "Updated meeting settings",
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+      {
+        name: "delete_meeting",
+        description:
+          "Delete a scheduled meeting",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "The meeting ID to delete",
+            },
+            occurrence_id: {
+              type: "string",
+              description: "The meeting occurrence ID for recurring meetings",
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+      {
+        name: "list_users",
+        description:
+          "List users in your Zoom account",
+        inputSchema: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              enum: ["active", "inactive", "pending"],
+              description: "User status filter",
+              default: "active",
+            },
+            page_size: {
+              type: "number",
+              description: "Number of records per page (max 300)",
+              default: 30,
+            },
+          },
+        },
+      },
+      {
+        name: "get_user",
+        description:
+          "Get information about a specific user",
+        inputSchema: {
+          type: "object",
+          properties: {
+            user_id: {
+              type: "string",
+              description: "User ID or email address",
+            },
+          },
+          required: ["user_id"],
+        },
+      },
+      {
+        name: "get_meeting_participants",
+        description:
+          "Get list of participants for a past meeting",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "The meeting ID or UUID",
+            },
+            page_size: {
+              type: "number",
+              description: "Number of records per page (max 300)",
+              default: 30,
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+      {
+        name: "get_meeting_recordings",
+        description:
+          "Get cloud recordings for a meeting",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "The meeting ID or UUID",
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+    ],
+  };
+});
+
+// Handle tool execution
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    switch (name) {
+      case "list_meetings": {
+        const type = args.type || "upcoming";
+        const pageSize = args.page_size || 30;
+        const data = await makeZoomRequest(
+          "GET",
+          `/users/me/meetings?type=${type}&page_size=${pageSize}`
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_meeting": {
+        const data = await makeZoomRequest("GET", `/meetings/${args.meeting_id}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "create_meeting": {
+        const meetingData = {
+          topic: args.topic,
+          type: args.type || 2,
+          start_time: args.start_time,
+          duration: args.duration,
+          timezone: args.timezone,
+          agenda: args.agenda,
+          password: args.password,
+          settings: args.settings || {},
+        };
+        const data = await makeZoomRequest("POST", "/users/me/meetings", meetingData);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "update_meeting": {
+        const { meeting_id, ...updateData } = args;
+        const data = await makeZoomRequest(
+          "PATCH",
+          `/meetings/${meeting_id}`,
+          updateData
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Meeting ${meeting_id} updated successfully`,
+            },
+          ],
+        };
+      }
+
+      case "delete_meeting": {
+        const occurrenceParam = args.occurrence_id
+          ? `?occurrence_id=${args.occurrence_id}`
+          : "";
+        await makeZoomRequest("DELETE", `/meetings/${args.meeting_id}${occurrenceParam}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Meeting ${args.meeting_id} deleted successfully`,
+            },
+          ],
+        };
+      }
+
+      case "list_users": {
+        const status = args.status || "active";
+        const pageSize = args.page_size || 30;
+        const data = await makeZoomRequest(
+          "GET",
+          `/users?status=${status}&page_size=${pageSize}`
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_user": {
+        const data = await makeZoomRequest("GET", `/users/${args.user_id}`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_meeting_participants": {
+        const pageSize = args.page_size || 30;
+        const data = await makeZoomRequest(
+          "GET",
+          `/past_meetings/${args.meeting_id}/participants?page_size=${pageSize}`
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_meeting_recordings": {
+        const data = await makeZoomRequest(
+          "GET",
+          `/meetings/${args.meeting_id}/recordings`
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      }
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+});
+
+// Start the server
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Zoom MCP Server running on stdio");
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});

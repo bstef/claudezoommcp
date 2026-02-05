@@ -1,0 +1,30 @@
+{
+  "name": "zoom-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Zoom API integration",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "zoom-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "mcp",
+    "zoom",
+    "model-context-protocol",
+    "ai",
+    "claude"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
