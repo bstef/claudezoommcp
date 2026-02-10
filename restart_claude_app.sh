@@ -3,11 +3,21 @@ set -euo pipefail
 
 APP_NAME="${CLAUDE_APP_NAME:-Claude}"
 
-# Refresh the Zoom access token before restarting Claude
+# Refresh the Zoom access token before restarting Claude.
+# Use the lightweight check script to avoid unnecessary network calls.
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$script_dir/get_zoom_token.sh" ]; then
-  "$script_dir/get_zoom_token.sh" >/dev/null 2>&1 || true
-  # Update Claude config with the new token
+if [ -x "$script_dir/check_zoom_token.sh" ]; then
+  if ! "$script_dir/check_zoom_token.sh" 60 >/dev/null 2>&1; then
+    "$script_dir/get_zoom_token.sh" >/dev/null 2>&1 || true
+    if [ -f "$script_dir/update_claude_config.sh" ]; then
+      "$script_dir/update_claude_config.sh" >/dev/null 2>&1 || true
+    fi
+  fi
+else
+  # If no checker is present, refresh unconditionally to be safe
+  if [ -f "$script_dir/get_zoom_token.sh" ]; then
+    "$script_dir/get_zoom_token.sh" >/dev/null 2>&1 || true
+  fi
   if [ -f "$script_dir/update_claude_config.sh" ]; then
     "$script_dir/update_claude_config.sh" >/dev/null 2>&1 || true
   fi

@@ -45,11 +45,21 @@ PY
 }
 
 # 1) Refresh token + update config + restart Claude only if needed
-if token_expired; then
-  ./get_zoom_token.sh
-  load_env
-  ./update_claude_config.sh
-  ./restart_claude_app.sh
+# Prefer the centralized check script when available
+if [ -x ./check_zoom_token.sh ]; then
+  if ! ./check_zoom_token.sh 60; then
+    ./get_zoom_token.sh
+    load_env
+    ./update_claude_config.sh
+    ./restart_claude_app.sh
+  fi
+else
+  if token_expired; then
+    ./get_zoom_token.sh
+    load_env
+    ./update_claude_config.sh
+    ./restart_claude_app.sh
+  fi
 fi
 
 # 2) Start MCP server (foreground)
