@@ -47,7 +47,16 @@ PY
 # 1) Refresh token + update config + restart Claude only if needed
 # Prefer the centralized check script when available
 if [ -x ./check_zoom_token.sh ]; then
-  if ! ./check_zoom_token.sh 60; then
+  # Determine threshold and verbose flags from env
+  threshold_arg=""
+  verbose_arg=""
+  if [ -n "${ZOOM_TOKEN_THRESHOLD:-}" ]; then
+    threshold_arg="-t $ZOOM_TOKEN_THRESHOLD"
+  fi
+  if [ -n "${ZOOM_CHECK_VERBOSE:-}" ]; then
+    verbose_arg="-v"
+  fi
+  if ! ./check_zoom_token.sh $threshold_arg $verbose_arg; then
     ./get_zoom_token.sh
     load_env
     ./update_claude_config.sh
