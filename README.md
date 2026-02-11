@@ -1,33 +1,51 @@
 # Zoom MCP Server
 
-Power Claude with Zoom. This MCP server wires Claude to the Zoom API for meetings, users, and recordings with a clean token-refresh flow and a one-command run sequence.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that integrates Zoom API with Claude Desktop. Manage meetings, users, and recordings directly from Claude with automatic token refresh and seamless setup.
 
-## What You Get
+## Features
 
-- MCP server with Zoom meeting, user, and recording tools
-- Token fetch + persistence in `.env`
-- Claude Desktop config updater
-- One-command run script that refreshes token only when expired and restarts Claude
-- Optional Claude app restart helper
+- **9 Zoom API Tools**: Meeting management (list, create, update, delete), user management, participants, and recordings
+- **Automatic Token Management**: JWT-based token validation with smart refresh (only when expired)
+- **One-Command Setup**: Single script handles token fetch, config update, Claude restart, and server startup
+- **Production Ready**: Comprehensive error handling, logging support, and cross-platform compatibility
+
+## Prerequisites
+
+- **Node.js** 18+ (check with `node --version`)
+- **Zoom Account** with API access
+- **Zoom Server-to-Server OAuth App** ([create one here](https://marketplace.zoom.us/))
+  - Required scopes: `meeting:read`, `meeting:write`, `user:read`, `recording:read`
+- **Claude Desktop** ([download](https://claude.ai/download))
+- **python3** (for token validation, typically pre-installed on macOS/Linux)
 
 ## Quick Start
 
-1. Install dependencies.
-```bash
-npm install
-```
+1. **Clone and install**
+   ```bash
+   git clone <your-repo-url>
+   cd zoommcp
+   npm install
+   ```
 
-2. Add Zoom credentials to `.env`.
-```bash
-ZOOM_CLIENT_ID="..."
-ZOOM_CLIENT_SECRET="..."
-ZOOM_ACCOUNT_ID="..."
-```
+2. **Configure Zoom credentials**
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your Zoom OAuth credentials:
+   # ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, ZOOM_ACCOUNT_ID
+   ```
 
-3. Run the server (auto refreshes token if expired, updates Claude config, restarts Claude).
-```bash
-./run.sh
-```
+3. **Run the server** (handles everything automatically)
+   ```bash
+   chmod +x *.sh  # Make scripts executable (first time only)
+   ./run.sh
+   ```
+   
+   This script will:
+   - Check if access token is expired
+   - Fetch a new token if needed
+   - Update Claude Desktop config
+   - Restart Claude Desktop app
+   - Start the MCP server
 
 ## Scripts
 
