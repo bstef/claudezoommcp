@@ -71,5 +71,15 @@ else
   fi
 fi
 
-# 2) Start MCP server (foreground)
+# 2) Open Zoom in browser
+open_zoom() {
+  echo "Opening Zoom meetings page..."
+  open "https://us04web.zoom.us/meeting#/upcoming"
+  echo "Please sign in with your Google email (benjaminstef.com) in the browser."
+}
+
+# 3) Open Zoom in browser
+open_zoom
+
+# 4) Start MCP server (foreground)
 node index.js
