@@ -1,0 +1,58 @@
+ZOOM MCP PROJECT - SIMPLE EXPLANATION
+=====================================
+
+WHAT IS THIS PROJECT?
+This project connects Zoom (video conferencing) with Claude (an AI assistant) so you can manage your Zoom meetings using natural language commands in Claude.
+
+Instead of logging into Zoom and clicking around, you can just ask Claude things like:
+- "Show me my upcoming Zoom meetings"
+- "Create a Zoom meeting for tomorrow at 10am"
+- "Delete that 2pm meeting"
+- "Get the recording from yesterday's meeting"
+
+HOW DOES IT WORK?
+1. The project creates a bridge (called an MCP Server) between Claude and the Zoom API
+2. When you run ./run.sh, it:
+   - Automatically opens your Zoom meetings page in the browser
+   - Manages your Zoom login credentials securely
+   - Starts the connection between Claude and Zoom
+   - Keeps your access fresh and valid
+
+WHY IS THIS USEFUL?
+- Save time: Manage meetings with simple text commands
+- No browser switching: Stay in Claude while managing Zoom
+- Automated tokens: Your login credentials are handled automatically
+- Always fresh: The system refreshes your access tokens before they expire
+
+WHAT CAN YOU DO?
+✓ List all your upcoming, scheduled, or past meetings
+✓ Create new Zoom meetings with details (time, duration, topic)
+✓ Update existing meetings
+✓ Delete meetings
+✓ View meeting participants
+✓ Get recording links
+✓ Manage Zoom users in your account
+
+QUICK START
+1. Set up your Zoom API credentials (free from Zoom Marketplace)
+2. Run: ./run.sh
+3. Your Zoom meetings page opens automatically
+4. Start chatting with Claude about your meetings!
+
+TECHNICAL DETAILS (IF INTERESTED)
+- Built with Node.js for the server
+- Uses Zoom's official API
+- Integrates with Claude Desktop app
+- Uses Server-to-Server OAuth (more secure than user login)
+- Automatically refreshes tokens so they never expire mid-use
+- Cross-platform (works on Mac, Linux, Windows)
+
+KEY BENEFIT
+Instead of: Login → Click meetings → Manage → Copy info
+You do: Talk to Claude about it → Done!
+
+This is especially useful for people who:
+- Use Claude for work every day
+- Schedule/manage lots of Zoom meetings
+- Want to save time on repetitive calendar tasks
+- Prefer text-based interactions
